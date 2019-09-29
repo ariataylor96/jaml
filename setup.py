@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='jaml-edit',
-    version='0.1',
+    version='0.0.2',
     description='Edit your YAML files as JSON - and vice versa!',
     url='https://github.com/markrawls/jaml',
     author='Mark Rawls',

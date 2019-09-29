@@ -1,11 +1,18 @@
 import os
+import sys
 import yaml 
 import json
+import signal
 import argparse
 
 from shutil import which
 
-from .identify import opposing_file_extension_for, is_json
+from .identify import (
+    is_json,
+    opposing_file_extension_for,
+    detect_indentation,
+    has_trailing_whitespace,
+)
 from .hash import md5_hash_for
 
 default_editors = [
@@ -25,10 +32,18 @@ def _parse_args():
 
     parser.add_argument('file_name', help='The file to edit')
     parser.add_argument(
+        '-i',
         '--indent',
         help='How indented the output data should be',
         type=int,
         default=None,
+    )
+    parser.add_argument(
+        '-t',
+        '--trailing-whitespace',
+        help='Add trailing whitespace to the end of the output',
+        action='store_true',
+        default=True,
     )
     args = parser.parse_args()
 
@@ -61,10 +76,13 @@ def get_funcs(file_name):
     return [yaml_funcs, json_funcs]
 
 
-def _interchange_contents(old_name, new_name, dump, load, indent):
+def _interchange_contents(old_name, new_name, dump, load, indent, trailing=False):
     with open(old_name, 'r') as old:
         with open(new_name, 'w') as new:
-            new.write(dump(load(old), indent=indent))
+            new.write(dump(load(old), indent=indent).rstrip())
+            
+            if trailing:
+                new.write('\n')
 
 
 def main():
@@ -79,25 +97,47 @@ def main():
     )
     
     indent = args.indent
-    
     if indent is None:
-        if is_json(args.file_name):
-            indent = 4
-        else:
-            indent = 2
+        indent = detect_indentation(args.file_name) or 2
 
     editor = os.getenv('EDITOR')
-
     if editor is None:
         editor = [ed for ed in default_editors if which(ed) is not None][0]
+        
+    trailing = args.trailing_whitespace
+    if trailing is None:
+        trailing = has_trailing_whitespace(args.file_name)
 
     new_file_name = os.path.join(
         '/tmp',
         md5_hash_for(args.file_name) + opposing_file_extension_for(args.file_name),
     )
+    
+    # Prepare for a SIGINT before any files are modified
+    def _sigint_handler(sig, frame):
+        print('Removing tmp file and exiting gracefully...')
+        os.remove(new_file_name)
+        sys.exit(0)
+    signal.signal(signal.SIGINT, _sigint_handler)
 
-    _interchange_contents(args.file_name, new_file_name, foreign_dump, native_load, indent)
+    _interchange_contents(
+        args.file_name,
+        new_file_name,
+        foreign_dump,
+        native_load,
+        indent,
+        trailing=trailing,
+    )
+
     os.system(f'{editor} {new_file_name}')
-    _interchange_contents(new_file_name, args.file_name, native_dump, foreign_load, indent)
+
+    _interchange_contents(
+        new_file_name,
+        args.file_name,
+        native_dump,
+        foreign_load,
+        indent,
+        trailing=trailing,
+    )
     
     os.remove(new_file_name)
