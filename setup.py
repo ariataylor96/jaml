@@ -5,7 +5,7 @@ with open('README.md', 'r') as f:
 
 setup(
     name='jaml-edit',
-    version='1.0.0',
+    version='1.0.1',
     description='Edit your YAML files as JSON - and vice versa!',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -16,7 +16,7 @@ setup(
     packages=['jaml'],
     zip_safe=False,
     install_requires=[
-        'pyyaml',
+        'PyYAML>=5.1.0',
     ],
     entry_points={
         'console_scripts': ['jaml=jaml.main:main'],
