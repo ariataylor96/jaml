@@ -5,7 +5,7 @@ with open('README.md', 'r') as f:
 
 setup(
     name='jaml-edit',
-    version='0.0.3',
+    version='1.0.0',
     description='Edit your YAML files as JSON - and vice versa!',
     long_description=long_description,
     long_description_content_type='text/markdown',
